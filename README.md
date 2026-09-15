@@ -1,6 +1,6 @@
-# DualLink (Obsidian Local File Linker)
+# DLink (Obsidian Local File Linker)
 
-**DualLink** is an efficient Obsidian plugin for linking, managing, and live previewing local and external physical files.
+**DLink** is an efficient Obsidian plugin for linking, managing, and live previewing local and external physical files.
 
 Due to Obsidian's vault mechanism limitations, handling large resource files (such as videos of tens of GB, lossless audio collections, or engineering source files) or system-level network drive mappings often requires keeping them outside the `.obsidian` vault. This plugin perfectly solves the pain point of "needing external path large file associations while also requiring smooth built-in preview", helping you seamlessly integrate **external absolute path files** and **internal vault files** within the same panel.
 
@@ -30,17 +30,17 @@ Due to Obsidian's vault mechanism limitations, handling large resource files (su
 
 ### From Obsidian Community Plugin Marketplace
 
-DualLink is now available on the official Obsidian Community Plugin Marketplace!
+DLink is now available on the official Obsidian Community Plugin Marketplace!
 
 1. Open Obsidian **Settings → Community Plugins**
 2. Turn off **Safe Mode** if enabled
-3. Click **Browse** and search for **"DualLink"**
+3. Click **Browse** and search for **"DLink"**
 4. Click **Install**, then **Enable**
 
 ### Manual Installation
 
 1. Download the latest release from [GitHub Releases](https://github.com/MarcBolo/DualLink/releases)
-2. Extract `main.js`, `styles.css`, and `manifest.json` into your vault's `.obsidian/plugins/dual-link/` directory
+2. Extract `main.js`, `styles.css`, and `manifest.json` into your vault's `.obsidian/plugins/dlink/` directory
 3. Enable the plugin in **Settings → Community Plugins**
 
 ---
@@ -78,12 +78,12 @@ Open plugin settings to change "Default Link Format":
 
 ## 🔌 Public API
 
-DualLink exposes a public API for other plugins to programmatically generate links, pack files, and search external directories.
+DLink exposes a public API for other plugins to programmatically generate links, pack files, and search external directories.
 
 ### Accessing the API
 
 ```typescript
-const dualLinkPlugin = this.app.plugins.getPlugin('dual-link');
+const dualLinkPlugin = this.app.plugins.getPlugin('dlink');
 if (dualLinkPlugin) {
   const api = dualLinkPlugin.api;
   // use api methods...
@@ -154,9 +154,9 @@ npm run build
 
 ## 中文说明
 
-**DualLink** 是一款专为 Obsidian 打造的高效本地及外部物理文件关联、管理与实时预览插件。
+**DLink** 是一款专为 Obsidian 打造的高效本地及外部物理文件关联、管理与实时预览插件。
 
-已上架 Obsidian 社区插件市场，可直接在 **设置 → 第三方插件 → 浏览** 中搜索 **"DualLink"** 安装。
+已上架 Obsidian 社区插件市场，可直接在 **设置 → 第三方插件 → 浏览** 中搜索 **"DLink"** 安装。
 
 ### 核心特性
 - **📂 双轨模式驱动** - 左侧边栏内置交互式文件浏览器，支持内部库与外部路径一键切换
@@ -168,7 +168,7 @@ npm run build
 
 ### 公共 API
 
-其他插件可通过 `this.app.plugins.getPlugin('dual-link')` 获取 DualLink 实例，调用 `.api` 上的方法：
+其他插件可通过 `this.app.plugins.getPlugin('dlink')` 获取 DLink 实例，调用 `.api` 上的方法：
 
 | 方法 | 说明 |
 |------|------|

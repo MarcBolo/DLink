@@ -74,7 +74,7 @@ export class LocalFileLinkerSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('移动端工具栏按钮 (Mobile Toolbar Button)')
-      .setDesc('在移动端编辑器工具栏上显示 DualLink 快捷按钮（仅在移动端有效）。')
+      .setDesc('在移动端编辑器工具栏上显示 DLink 快捷按钮（仅在移动端有效）。')
       .addToggle(toggle => toggle
         .setValue(this.plugin.settings.showMobileToolbarButton)
         .onChange(async (value) => {

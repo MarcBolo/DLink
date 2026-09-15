@@ -85,7 +85,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
   private relocateQueue = new Map<string, Promise<void>>();
 
   async onload() {
-    console.log('正在加载 Obsidian 外部物理文件关联映射插件 (DualLink)...');
+    console.log('正在加载 Obsidian 外部物理文件关联映射插件 (DLink)...');
     await this.loadSettings();
 
     // 初始化公共 API（供其他插件调用）
@@ -161,7 +161,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
         this.app.workspace.on('editor-menu', (menu, editor, view) => {
           menu.addItem((item) => {
             item
-              .setTitle('DualLink')
+              .setTitle('DLink')
               .setIcon('link-2')
               .onClick(() => {
                 void this.promptForLocalFileLink(editor);
@@ -338,7 +338,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
       });
     } else {
       // 移动端提示
-      console.log('DualLink: Running in mobile mode, desktop features disabled.');
+      console.log('DLink: Running in mobile mode, desktop features disabled.');
     }
 
     // 5.5 注册分栏组图 (Gallery) 的 代码块处理器（通用功能）
@@ -355,7 +355,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
 
     // 7. 添加 Ribbon 图标（桌面和移动端通用）
     if (this.settings.showMobileToolbarButton) {
-      this.addRibbonIcon('link-2', 'DualLink', (evt: MouseEvent) => {
+      this.addRibbonIcon('link-2', 'DLink', (evt: MouseEvent) => {
         if (isDesktop() && fs && path && electron) {
           this.showDesktopMenu();
         } else {
@@ -433,10 +433,10 @@ export default class LocalFileLinkerPlugin extends Plugin {
     menu.addSeparator();
 
     menu.addItem((item) => {
-      item.setTitle('关于 DualLink')
+      item.setTitle('关于 DLink')
         .setIcon('info')
         .onClick(() => {
-          new Notice('DualLink - 管理本地与保险库文件链接的插件。桌面端支持更多功能。');
+          new Notice('DLink - 管理本地与保险库文件链接的插件。桌面端支持更多功能。');
         });
     });
 
@@ -444,7 +444,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
   }
 
   onunload() {
-    console.log('正在卸载 Obsidian 本地物理链接插件 (DualLink)...');
+    console.log('正在卸载 Obsidian 本地物理链接插件 (DLink)...');
   }
 
   async loadSettings() {
@@ -938,7 +938,7 @@ export class PathPromptModal extends Modal {
                                 if (this.pathInputEl) this.pathInputEl.value = this.currentFolderPath;
                                 await this.loadFiles();
                             } catch (err) {
-                                console.error('DualLink browse error:', err);
+                                console.error('DLink browse error:', err);
                                 new Notice('读取目录失败: ' + (err instanceof Error ? err.message : String(err)));
                             }
                         } else {
@@ -1190,7 +1190,7 @@ export class PathPromptModal extends Modal {
 
           this.renderFiles();
       } catch (e) {
-          console.error('DualLink loadFiles error:', e);
+          console.error('DLink loadFiles error:', e);
           new Notice('无法读取该路径: ' + (e instanceof Error ? e.message : String(e)));
           this.renderEmptyState('无法读取该路径，请检查路径是否正确或是否存在权限限制。');
       }
