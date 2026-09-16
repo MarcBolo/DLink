@@ -2,7 +2,8 @@
 
 Link, preview and manage files that live outside your vault — large videos, lossless audio, engineering assets, network drives — right inside Obsidian notes.
 
-![[案例.png]]
+<img width="1257" height="928" alt="image" src="https://github.com/user-attachments/assets/09a28269-27c5-4230-8132-0989076eb512" />
+
 
 # Features
 
