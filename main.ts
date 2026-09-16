@@ -3,7 +3,6 @@
  * Built for Obsidian (runs on Electron)
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Node.js 内置模块 (fs/path) 及 Obsidian Vault adapter 运行时代理成员访问 */
 import { 
   Plugin, 
   MarkdownView, 
@@ -18,7 +17,7 @@ import { isDesktop } from './platform';
 import { isImageExt, isVideoExt, isAudioExt, isMediaExt } from './constants';
 import { getCleanLocalPath, getCleanAppLocalPath, safeDecodeURIComponent, vaultRelativeFromAbsolute, encodeFileUriPath } from './path-utils';
 import { blobUrlForFilePath, trackBlobNode, PREVIEW_VIDEO_BYTE_LIMIT } from './media-blob';
-import { electron, fs, path } from './node-modules';
+import { electron, fs, path, type NodeDirent } from './node-modules';
 import {
   findExternalFileRec,
   relocateMissingFile,
@@ -31,7 +30,7 @@ import { LocalFileLinkerSettingTab } from './setting-tab';
 import { MobileFilePickerModal } from './mobile-file-picker';
 import { createPublicAPI, DualLinkPublicAPI } from './api';
 
-import { LocalFileLinkerSettings, FileItem, IDualLinkPlugin, VaultAdapter, FileWithPath, HTMLInputElementWithDirectory } from './types';
+import { LocalFileLinkerSettings, FileItem, VaultAdapter, VaultConfigExt, FileWithPath } from './types';
 
 
 const DEFAULT_SETTINGS: LocalFileLinkerSettings = {
@@ -158,7 +157,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
 
       // 4.5 注册右键菜单 (Editor Context Menu)
       this.registerEvent(
-        this.app.workspace.on('editor-menu', (menu, editor, view) => {
+        this.app.workspace.on('editor-menu', (menu, editor) => {
           menu.addItem((item) => {
             item
               .setTitle('DLink')
@@ -204,7 +203,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
           }
 
           if (isVideoExt(newExt)) {
-            const video = activeDocument.createElement('video');
+            const video = createEl('video');
             video.src = newBlobUrl;
             video.controls = false;
             video.addEventListener('mouseenter', () => video.controls = true);
@@ -213,7 +212,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
             el.replaceWith(video);
             trackBlobNode(video, newBlobUrl);
           } else if (isAudioExt(newExt)) {
-            const audio = activeDocument.createElement('audio');
+            const audio = createEl('audio');
             audio.src = newBlobUrl;
             audio.controls = true;
             audio.className = 'duallink-rendered-audio';
@@ -222,9 +221,9 @@ export default class LocalFileLinkerPlugin extends Plugin {
           } else if (el.tagName === 'IMG') {
             (el as HTMLImageElement).src = newBlobUrl;
             (el as HTMLImageElement).className = 'duallink-rendered-image';
-            trackBlobNode(el as HTMLElement, newBlobUrl);
+            trackBlobNode(el, newBlobUrl);
           } else {
-            const img = activeDocument.createElement('img');
+            const img = createEl('img');
             img.src = newBlobUrl;
             img.className = 'duallink-rendered-image';
             el.replaceWith(img);
@@ -250,7 +249,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
 
             if (isVideoExt(ext)) {
               if (blobUrl) {
-                const video = activeDocument.createElement('video');
+                const video = createEl('video');
                 video.src = blobUrl;
                 video.controls = false;
                 video.addEventListener('mouseenter', () => video.controls = true);
@@ -261,7 +260,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
               }
             } else if (isAudioExt(ext)) {
               if (blobUrl) {
-                const audio = activeDocument.createElement('audio');
+                const audio = createEl('audio');
                 audio.src = blobUrl;
                 audio.controls = true;
                 audio.className = 'duallink-rendered-audio';
@@ -310,7 +309,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
               }
 
               if (isVideoExt(ext)) {
-                const video = activeDocument.createElement('video');
+                const video = createEl('video');
                 video.src = blobUrl;
                 video.controls = false;
                 video.addEventListener('mouseenter', () => video.controls = true);
@@ -319,14 +318,14 @@ export default class LocalFileLinkerPlugin extends Plugin {
                 a.replaceWith(video);
                 trackBlobNode(video, blobUrl);
               } else if (isAudioExt(ext)) {
-                const audio = activeDocument.createElement('audio');
+                const audio = createEl('audio');
                 audio.src = blobUrl;
                 audio.controls = true;
                 audio.className = 'duallink-rendered-audio';
                 a.replaceWith(audio);
                 trackBlobNode(audio, blobUrl);
               } else if (isImageExt(ext)) {
-                const img = activeDocument.createElement('img');
+                const img = createEl('img');
                 img.src = blobUrl;
                 img.className = 'duallink-rendered-image';
                 a.replaceWith(img);
@@ -355,7 +354,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
 
     // 7. 添加 Ribbon 图标（桌面和移动端通用）
     if (this.settings.showMobileToolbarButton) {
-      this.addRibbonIcon('link-2', 'DLink', (evt: MouseEvent) => {
+      this.addRibbonIcon('link-2', 'DLink', () => {
         if (isDesktop() && fs && path && electron) {
           this.showDesktopMenu();
         } else {
@@ -512,7 +511,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
 
     // 同一笔记的改写任务串行排队，避免并发 process 相互覆盖
     const prev = this.relocateQueue.get(sourcePath) ?? Promise.resolve();
-    const next = prev.then(rewrite).catch(() => undefined);
+    const next = prev.then(rewrite).catch(() => { /* 忽略单次改写失败，避免阻塞同笔记的后续任务 */ });
     this.relocateQueue.set(sourcePath, next);
     void next.then(() => {
       if (this.relocateQueue.get(sourcePath) === next) this.relocateQueue.delete(sourcePath);
@@ -630,7 +629,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
         return;
       }
 
-      let href = null;
+      let href: string | null = null;
       if (target.tagName === 'A' && target.classList.contains('external-link')) {
         href = target.getAttribute('href');
       } else if (target.classList.contains('cm-url') || target.classList.contains('cm-link') || target.classList.contains('cm-underline')) {
@@ -651,7 +650,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
       const target = evt.target as HTMLElement;
       if (!target) return;
 
-      let href = null;
+      let href: string | null = null;
       if (target.tagName === 'A' && target.classList.contains('external-link')) {
         href = target.getAttribute('href');
       } else if (target.classList.contains('cm-url') || target.classList.contains('cm-link') || target.classList.contains('cm-underline')) {
@@ -722,7 +721,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
   getAttachmentFolderPath(): string {
     const vaultBase = this.getVaultBasePath();
     if (!vaultBase) return '';
-    const cfg = String((this.app.vault as any).config?.attachmentFolderPath ?? '.');
+    const cfg = String((this.app.vault as unknown as VaultConfigExt).config?.attachmentFolderPath ?? '.');
     const activeNoteDir = () => {
       const af = this.app.workspace.getActiveFile();
       return af ? path.dirname(path.join(vaultBase, af.path)) : vaultBase;
@@ -749,9 +748,10 @@ export default class LocalFileLinkerPlugin extends Plugin {
                   new Notice(`⚠️ 无法唤醒程序: ${err}`, 5000);
                 }
               }).catch((e: unknown) => {
-                new Notice(`⚠️ 无法打开文件: ${String(e)}`, 5000);
+                const msg = e instanceof Error ? e.message : (typeof e === 'string' ? e : '未知错误');
+                new Notice(`⚠️ 无法打开文件: ${msg}`, 5000);
               });
-    } catch (e) {
+    } catch {
       // 兼容非 Electron Web 环境下的说明
       new Notice('提示：当前不在本地 Electron 桌面外壳中。请在桌面版 Obsidian 中使用以一键唤起。');
     }
@@ -760,7 +760,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
   /**
    * 手动指令录入全路径降级辅助
    */
-  async promptForLocalFileLink(editor?: Editor) {
+  promptForLocalFileLink(editor?: Editor) {
     if (!isDesktop() || !fs || !path) {
       new Notice('文件浏览器功能仅支持桌面版 Obsidian');
       return;
@@ -879,6 +879,7 @@ export class PathPromptModal extends Modal {
       cls: 'path-input'
     });
     this.pathInputEl.value = this.currentFolderPath;
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- 事件回调内含 await，返回值被忽略是预期行为
     this.pathInputEl.addEventListener('change', async (e) => {
         this.currentFolderPath = (e.target as HTMLInputElement).value;
         await this.loadFiles();
@@ -886,13 +887,14 @@ export class PathPromptModal extends Modal {
     
     // 浏览按钮 - 优先用 Electron 原生对话框
     const browseBtn = pathRow.createEl('button', { text: '浏览', cls: 'btn-plain btn-browse' });
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- 事件回调内含 await，返回值被忽略是预期行为
     browseBtn.addEventListener('click', async () => {
         // 尝试 Electron 原生对话框
         let selectedDir: string | null = null;
         try {
-            const electronModule: any = require('electron');
-            if (electronModule?.remote?.dialog) {
-                const result = await electronModule.remote.dialog.showOpenDialog({
+            const remoteDialog = electron?.remote?.dialog;
+            if (remoteDialog) {
+                const result = await remoteDialog.showOpenDialog({
                     title: '选择文件夹',
                     properties: ['openDirectory']
                 });
@@ -910,7 +912,7 @@ export class PathPromptModal extends Modal {
             await this.loadFiles();
         } else {
             // 降级: HTML webkitdirectory input
-            const fileInput = activeDocument.createElement('input') as HTMLInputElementWithDirectory;
+            const fileInput = createEl('input');
             fileInput.type = 'file';
             fileInput.setAttribute('webkitdirectory', '');
             fileInput.setAttribute('directory', '');
@@ -969,6 +971,7 @@ export class PathPromptModal extends Modal {
     };
     updateModeBtn();
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- 事件回调内含 await，返回值被忽略是预期行为
     modeBtn.addEventListener('click', async () => {
         if (this.currentMode === 'external') {
             this.currentMode = 'internal';
@@ -1157,7 +1160,7 @@ export class PathPromptModal extends Modal {
       try {
           const dirents = await fs.promises.readdir(this.currentFolderPath, { withFileTypes: true });
           
-          this.filesList = dirents.map((dirent: import('fs').Dirent) => {
+          this.filesList = dirents.map((dirent: NodeDirent) => {
               const fullPath = path.join(this.currentFolderPath, dirent.name);
               return {
                   name: dirent.name,
@@ -1198,7 +1201,7 @@ export class PathPromptModal extends Modal {
 
   renderEmptyState(text: string) {
       this.contentContainer.empty();
-      this.contentContainer.createEl('div', { text, cls: 'empty-msg' });
+      this.contentContainer.createDiv({ text, cls: 'empty-msg' });
   }
 
   renderFiles() {
@@ -1230,7 +1233,7 @@ export class PathPromptModal extends Modal {
                   ext: ''
               });
           }
-      } catch (e) { }
+      } catch { }
 
       filtered.forEach(file => {
           if (file.isDirectory) ordered.push(file);
@@ -1254,10 +1257,10 @@ export class PathPromptModal extends Modal {
 
           if (file.isDirectory) {
               previewDiv.addClass('folder-preview-div');
-              previewDiv.createEl('div', { text: '📁', cls: 'file-icon' });
+              previewDiv.createDiv({ text: '📁', cls: 'file-icon' });
           } else if (imageCheck || videoCheck) {
               const renderBadge = () =>
-                  previewDiv.createEl('div', { text: file.ext ? file.ext.toUpperCase() : '?', cls: 'file-type-badge' });
+                  previewDiv.createDiv({ text: file.ext ? file.ext.toUpperCase() : '?', cls: 'file-type-badge' });
               try {
                   const stat = fs.statSync(file.path);
                   if (stat.size > PREVIEW_VIDEO_BYTE_LIMIT) {
@@ -1283,10 +1286,10 @@ export class PathPromptModal extends Modal {
                   renderBadge();
               }
           } else {
-              previewDiv.createEl('div', { text: file.ext ? file.ext.toUpperCase() : '?', cls: 'file-type-badge' });
+              previewDiv.createDiv({ text: file.ext ? file.ext.toUpperCase() : '?', cls: 'file-type-badge' });
           }
           
-          const nameSpan = item.createEl('div', { 
+          const nameSpan = item.createDiv({ 
             text: file.name, 
             cls: isMobileDevice ? 'file-name file-name--mobile' : 'file-name' 
           });
@@ -1297,11 +1300,12 @@ export class PathPromptModal extends Modal {
               item.addClass('file-item--selected');
           }
 
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- 事件回调内含 await，返回值被忽略是预期行为
           item.addEventListener('click', async (e) => {
               if (file.isDirectory) {
                   this.currentFolderPath = file.path;
                   this.searchQuery = '';
-                  const searchInput = activeDocument.querySelector('input[placeholder="搜索该目录下的文件..."]') as HTMLInputElement;
+                  const searchInput = activeDocument.querySelector<HTMLInputElement>('input[placeholder="搜索该目录下的文件..."]');
                   if (searchInput) searchInput.value = '';
                   await this.loadFiles();
               } else {
@@ -1340,7 +1344,5 @@ export class PathPromptModal extends Modal {
     contentEl.empty();
   }
 }
-
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- 恢复 no-unsafe-member-access 检查 */
 
 

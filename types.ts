@@ -55,6 +55,13 @@ export interface VaultExt {
 }
 
 /**
+ * Vault 内部配置（Obsidian 未公开在类型定义中，用于读取附件目录配置）
+ */
+export interface VaultConfigExt {
+  config?: { attachmentFolderPath?: string };
+}
+
+/**
  * 插件实例接口 - 供 gallery-processor / packer / mobile-file-picker 引用，
  * 避免与 main.ts 循环依赖
  */

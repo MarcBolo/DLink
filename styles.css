@@ -1,18 +1,5 @@
 /* DLink Plugin Styles */
 
-/* 预览弹窗样式 */
-.local-preview-popover {
-  position: absolute;
-  z-index: 1000;
-  background: var(--background-secondary, #1e1e24);
-  border: 1px solid var(--border-color, #2d2d34);
-  border-radius: 8px;
-  padding: 12px;
-  width: 320px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-  color: var(--text-normal, #e4e4e7);
-}
-
 /* 媒体元素样式 */
 .local-media-video {
   max-width: 100%;
@@ -59,11 +46,11 @@
   display: flex;
   flex-direction: column;
 }
-/* 移动端样式 - 需要 !important 覆盖 Obsidian modal 的内联样式 */
-.dual-link-modal--mobile {
-  width: 100% !important;
-  max-width: none !important;
-  min-height: 60vh !important;
+/* 移动端样式：用提高选择器优先级（而非 !important）覆盖 Obsidian modal 的尺寸 */
+.modal.dual-link-modal.dual-link-modal--mobile {
+  width: 100%;
+  max-width: none;
+  min-height: 60vh;
 }
 
 .dual-link-modal .content-wrapper {
@@ -450,10 +437,11 @@
   opacity: 1;
 }
 
-.duallink-gallery-col-btn {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
+/* 用父级容器限定提高优先级，取代 !important 覆盖主题按钮样式 */
+.duallink-gallery-col-ctrl .duallink-gallery-col-btn {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   cursor: pointer;
   color: var(--text-muted);
   font-size: 24px;
@@ -659,26 +647,13 @@
     box-shadow: none;
 }
 
-/* 阅读视图隐藏按钮 - display:none 需 !important 覆盖 Obsidian 按钮默认 display 值 */
-.markdown-reading-view .duallink-gallery-add-btn,
-.markdown-reading-view .duallink-gallery-sub-btn,
-.markdown-reading-view .duallink-gallery-plus-btn {
-    display: none !important;
-}
-
 /* ================= 响应式样式 - 移动端适配 ================= */
-/* 移动端样式 - 需要 !important 覆盖 Obsidian modal 的内联样式 */
+/* 移动端样式：统一用提高选择器优先级的方式覆盖 Obsidian 默认样式 */
 @media (max-width: 768px) {
-  /* 预览弹窗样式 - 移动端 */
-  .local-preview-popover {
-    width: 280px;
-    padding: 10px;
-  }
-  
-  /* 文件浏览器模态框 - 移动端 - 需要 !important */
-  .dual-link-modal {
-    width: 100% !important;
-    max-width: none !important;
+  /* 文件浏览器模态框 - 移动端：同样以选择器优先级取代 !important */
+  .modal.dual-link-modal.dual-link-modal {
+    width: 100%;
+    max-width: none;
     height: 85vh;
     border-radius: 0;
   }
@@ -752,13 +727,8 @@
   }
 }
 
-/* 超小屏幕优化 - 需要 !important 覆盖 Obsidian popover 样式 */
+/* 超小屏幕优化 */
 @media (max-width: 480px) {
-  .local-preview-popover {
-    width: 90vw;
-    left: 5vw !important;
-  }
-  
   .dual-link-modal .content-container {
     column-count: 2;
     column-gap: 10px;

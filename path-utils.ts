@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Obsidian Vault adapter 类型不完整，运行时代理可能包含额外方法 */
 import { App, Platform } from 'obsidian';
 import { VaultAdapter, VaultExt } from './types';
 
@@ -106,4 +105,3 @@ export function getConvertPath(app: App, filePath: string): string {
     const prefix = Platform.resourcePathPrefix || 'app://local/';
     return `${prefix}${cleanPath}`;
 }
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- 恢复 no-unsafe-member-access 检查 */

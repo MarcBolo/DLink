@@ -16,7 +16,7 @@ export class MobileFilePickerModal extends Modal {
     this.editor = editor;
   }
 
-  async onOpen() {
+  onOpen() {
     const { contentEl } = this;
     contentEl.empty();
 
@@ -30,7 +30,7 @@ export class MobileFilePickerModal extends Modal {
     contentEl.addClass('mobile-file-picker-content');
 
     // 标题
-    const titleEl = contentEl.createEl('h3', { text: '选择保险库中的文件', cls: 'mobile-file-picker-title' });
+    contentEl.createEl('h3', { text: '选择保险库中的文件', cls: 'mobile-file-picker-title' });
 
     // 搜索框
     const searchRow = contentEl.createDiv({ cls: 'mobile-file-picker-search-row' });
@@ -105,7 +105,7 @@ export class MobileFilePickerModal extends Modal {
     });
 
     if (filtered.length === 0) {
-      const empty = this.contentContainer.createEl('div', {
+      this.contentContainer.createDiv({
         text: '没有找到匹配的文件',
         cls: 'mobile-file-picker-empty',
       });
@@ -113,7 +113,7 @@ export class MobileFilePickerModal extends Modal {
     }
 
     // 显示结果计数
-    const countEl = this.contentContainer.createEl('div', {
+    this.contentContainer.createDiv({
       text: `共 ${filtered.length} 个文件`,
       cls: 'mobile-file-picker-count',
     });
@@ -126,7 +126,6 @@ export class MobileFilePickerModal extends Modal {
   private renderFileItem(file: TFile) {
     const isMobileDevice = window.innerWidth < 768;
     const ext = file.extension.toLowerCase();
-    const isMedia = isMediaExt(ext);
 
     const item = this.contentContainer.createDiv({ cls: isMobileDevice ? 'mobile-file-picker-item mobile-file-picker-item--mobile' : 'mobile-file-picker-item' });
 
@@ -161,17 +160,17 @@ export class MobileFilePickerModal extends Modal {
       else if (isAudioExt(ext)) iconText = '🎵';
       else if (ext === 'md') iconText = '📝';
 
-      const icon = iconDiv.createEl('span', { text: iconText, cls: isMobileDevice ? 'mobile-file-picker-file-icon mobile-file-picker-file-icon--mobile' : 'mobile-file-picker-file-icon' });
+      iconDiv.createSpan({ text: iconText, cls: isMobileDevice ? 'mobile-file-picker-file-icon mobile-file-picker-file-icon--mobile' : 'mobile-file-picker-file-icon' });
     }
 
     // 文件信息
     const infoDiv = item.createDiv({ cls: 'mobile-file-picker-info' });
 
-    const nameEl = infoDiv.createEl('div', { text: file.name, cls: 'mobile-file-picker-name' });
+    infoDiv.createDiv({ text: file.name, cls: 'mobile-file-picker-name' });
 
     // 路径
     const dirPath = file.parent?.path || '';
-    const pathEl = infoDiv.createEl('div', { text: dirPath || '根目录', cls: 'mobile-file-picker-path' });
+    infoDiv.createDiv({ text: dirPath || '根目录', cls: 'mobile-file-picker-path' });
 
     // 点击事件 - 插入链接到编辑器
     item.addEventListener('click', () => {

@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access -- Node.js内置模块成员访问 */
 import { Notice, Modal, App, TFile, MarkdownView } from 'obsidian';
 import { isMediaExt, isVideoExt, isAudioExt, isImageExt } from './constants';
 import { encodeFileUriPath } from './path-utils';
 import { blobUrlForFilePath, trackBlobNode } from './media-blob';
-import { IDualLinkPlugin, VaultAdapter, MetadataCacheExt } from './types';
-import { fs, path } from './node-modules';
+import { IDualLinkPlugin, VaultAdapter, VaultConfigExt, MetadataCacheExt } from './types';
+import { fs, path, BufferCtor, type NodeDirent } from './node-modules';
 
 // 配置目录名称（Obsidian 允许用户自定义，默认为 .obsidian）
 const DEFAULT_CONFIG_DIR = '.obsidian';
@@ -15,7 +14,7 @@ const FIND_FILE_CACHE_LIMIT = 512;
 function cacheFindFile(cacheKey: string, value: string | null): void {
   findFileCache.set(cacheKey, value);
   if (findFileCache.size > FIND_FILE_CACHE_LIMIT) {
-    const oldestKey = findFileCache.keys().next().value as string | undefined;
+    const [oldestKey] = findFileCache.keys();
     if (oldestKey !== undefined) findFileCache.delete(oldestKey);
   }
 }
@@ -42,8 +41,8 @@ export function isSameFile(path1: string, path2: string): boolean {
     fd1 = fs.openSync(path1, 'r');
     fd2 = fs.openSync(path2, 'r');
     const BUF_SIZE = 65536;
-    const buf1 = Buffer.allocUnsafe(BUF_SIZE);
-    const buf2 = Buffer.allocUnsafe(BUF_SIZE);
+    const buf1 = BufferCtor.allocUnsafe(BUF_SIZE);
+    const buf2 = BufferCtor.allocUnsafe(BUF_SIZE);
     let remaining = stat1.size;
     while (remaining > 0) {
       const read1 = fs.readSync(fd1, buf1, 0, BUF_SIZE, null);
@@ -99,7 +98,7 @@ export async function hasOtherReferences(app: App, file: TFile, currentPath: str
     const linkRe = /\[\[([^\]|#]+)/g;
     for (const mf of app.vault.getMarkdownFiles()) {
       if (mf.path === currentPath) continue;
-      const lower = (await fs.promises.readFile(path.join(vaultBase, mf.path), 'utf8').catch(() => null))?.toLowerCase();
+      const lower = (await fs.promises.readFile(path.join(vaultBase, mf.path), 'utf8').catch(() => '')).toLowerCase();
       if (!lower) continue;
       linkRe.lastIndex = 0;
       let m: RegExpExecArray | null;
@@ -125,7 +124,9 @@ export function findFileRecursive(dir: string, targetName: string, maxDepth: num
   const stack: { dirPath: string; depth: number }[] = [{ dirPath: dir, depth: 0 }];
 
   while (stack.length > 0) {
-    const { dirPath, depth } = stack.pop() as { dirPath: string; depth: number } | undefined;
+    const next = stack.pop();
+    if (!next) break;
+    const { dirPath, depth } = next;
     if (!dirPath) break;
     const dirName = path.basename(dirPath);
 
@@ -142,7 +143,7 @@ export function findFileRecursive(dir: string, targetName: string, maxDepth: num
           return fullPath;
         }
       }
-    } catch (e) { /* directory read error, skip */ }
+    } catch { /* directory read error, skip */ }
   }
 
   cacheFindFile(cacheKey, null);
@@ -171,7 +172,7 @@ export async function findExternalFileRec(
         return path.join(dir, entry.name);
       }
     }
-  } catch (e) { /* directory read error, skip */ }
+  } catch { /* directory read error, skip */ }
   return null;
 }
 
@@ -240,10 +241,10 @@ export async function packToVault(plugin: IDualLinkPlugin): Promise<void> {
   const content = editingViews.length > 0
     ? editingViews[0].editor.getValue()
     : await plugin.app.vault.read(activeFile);
-  const vaultBasePath = (plugin.app.vault.adapter as any).getBasePath();
+  const vaultBasePath = (plugin.app.vault.adapter as unknown as VaultAdapter).getBasePath();
 
   const attachmentFolderCfg =
-    ((plugin.app.vault as any).config?.attachmentFolderPath as string) || '.';
+    (plugin.app.vault as unknown as VaultConfigExt).config?.attachmentFolderPath || '.';
   let attachmentsDir: string;
   let attachmentVaultPrefix: string;
 
@@ -291,7 +292,7 @@ export async function packToVault(plugin: IDualLinkPlugin): Promise<void> {
 
   for (const regex of [imgRegex, linkRegex, mediaRegex]) {
     regex.lastIndex = 0;
-    let match;
+    let match: RegExpExecArray | null;
     while ((match = regex.exec(content)) !== null) {
       let extPath: string;
       if (match[1] === 'video' || match[1] === 'audio') {
@@ -362,8 +363,8 @@ export async function packToVault(plugin: IDualLinkPlugin): Promise<void> {
           const data = await fs.promises.readFile(extPath);
           const arrayBuffer =
             data.byteOffset === 0 && data.byteLength === data.buffer.byteLength
-              ? data.buffer as ArrayBuffer
-              : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+              ? data.buffer
+              : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
           await plugin.app.vault.createBinary(internalPath, arrayBuffer);
         }
 
@@ -372,7 +373,7 @@ export async function packToVault(plugin: IDualLinkPlugin): Promise<void> {
           new: media ? `![[${internalPath}]]` : `[[${internalPath}]]`,
         });
         successCount++;
-      } catch (e) {
+      } catch {
         failCount++;
       }
       processed.add(extPath);
@@ -395,7 +396,7 @@ export async function packOut(plugin: IDualLinkPlugin): Promise<void> {
     return;
   }
 
-  let externalDir = plugin.settings.externalMediaFolder;
+  const externalDir = plugin.settings.externalMediaFolder;
   if (!externalDir) {
     new Notice('请在插件设置中配置"外部媒体归档目录"，或稍后设置后再试。');
     return;
@@ -413,12 +414,12 @@ export async function packOut(plugin: IDualLinkPlugin): Promise<void> {
   const content = editingViews.length > 0
     ? editingViews[0].editor.getValue()
     : await plugin.app.vault.read(activeFile);
-  const vaultBasePath = (plugin.app.vault.adapter as any).getBasePath();
+  const vaultBasePath = (plugin.app.vault.adapter as unknown as VaultAdapter).getBasePath();
 
   const replacements: { old: string; new: string }[] = [];
   let successCount = 0;
   let skipCount = 0;
-  let failCount = 0;
+  const failCount = 0;
   let copyCount = 0;
   const processed = new Set<string>();
   // #2：剪出语义下待删除的库内原件，统一在笔记内容改写成功后经 vault.delete 删除，
@@ -439,7 +440,7 @@ export async function packOut(plugin: IDualLinkPlugin): Promise<void> {
   };
 
   const internalLinkRegex = /!\[\[([^\]]+)\]\]/g;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = internalLinkRegex.exec(content)) !== null) {
     const linkPath = match[1].split('|')[0].trim();
     if (processed.has(linkPath)) continue;
@@ -581,27 +582,27 @@ class FileDedupModal extends Modal {
     contentEl.createEl('h3', { text: '发现同名文件' });
     contentEl.createEl('p', { text: '保险库中已存在同名文件，请确认是否与此文件相同：', cls: 'duallink-dedup-desc' });
 
-    const previewRow = contentEl.createEl('div', { cls: 'duallink-dedup-preview-row' });
+    const previewRow = contentEl.createDiv({ cls: 'duallink-dedup-preview-row' });
 
-    const leftCol = previewRow.createEl('div', { cls: 'duallink-dedup-preview-col' });
-    leftCol.createEl('div', { text: '保险库已有', cls: 'duallink-dedup-preview-title' });
+    const leftCol = previewRow.createDiv({ cls: 'duallink-dedup-preview-col' });
+    leftCol.createDiv({ text: '保险库已有', cls: 'duallink-dedup-preview-title' });
     this.renderFilePreview(leftCol, this.existingPath);
 
-    const rightCol = previewRow.createEl('div', { cls: 'duallink-dedup-preview-col' });
-    rightCol.createEl('div', { text: '即将导入', cls: 'duallink-dedup-preview-title' });
+    const rightCol = previewRow.createDiv({ cls: 'duallink-dedup-preview-col' });
+    rightCol.createDiv({ text: '即将导入', cls: 'duallink-dedup-preview-title' });
     this.renderFilePreview(rightCol, this.newPath);
 
-    const infoRow = contentEl.createEl('div', { cls: 'duallink-dedup-info-row' });
+    const infoRow = contentEl.createDiv({ cls: 'duallink-dedup-info-row' });
     for (const p of [this.existingPath, this.newPath]) {
-      const col = infoRow.createEl('div', { cls: 'duallink-dedup-info-col' });
+      const col = infoRow.createDiv({ cls: 'duallink-dedup-info-col' });
       try {
         const stat = fs.statSync(p);
-        col.createEl('div', { text: `${(stat.size / 1024).toFixed(1)} KB` });
-        col.createEl('div', { text: stat.mtime.toLocaleString() });
+        col.createDiv({ text: `${(stat.size / 1024).toFixed(1)} KB` });
+        col.createDiv({ text: stat.mtime.toLocaleString() });
       } catch { /* stat failed */ }
     }
 
-    const btnRow = contentEl.createEl('div', { cls: 'duallink-dedup-btn-row' });
+    const btnRow = contentEl.createDiv({ cls: 'duallink-dedup-btn-row' });
 
     const sameBtn = btnRow.createEl('button', { cls: 'duallink-dedup-btn--primary' });
     sameBtn.textContent = '是同一个文件，使用现有';
@@ -646,8 +647,8 @@ class FileDedupModal extends Modal {
         }
       } catch { /* preview failed */ }
     } else {
-      const icon = container.createEl('div', { text: '📄', cls: 'duallink-dedup-preview-icon' });
-      container.createEl('div', { text: path.basename(filePath), cls: 'duallink-dedup-preview-name' });
+      container.createDiv({ text: '📄', cls: 'duallink-dedup-preview-icon' });
+      container.createDiv({ text: path.basename(filePath), cls: 'duallink-dedup-preview-name' });
     }
   }
 }
@@ -702,8 +703,8 @@ async function locateByFileName(oldPath: string, newRoot: string, skipDirs: Set<
   const stack: string[] = [newRoot];
 
   while (stack.length > 0) {
-    const dirPath = stack.pop() as string;
-    let entries;
+    const dirPath = stack.pop();
+    let entries: NodeDirent[];
     try {
       entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
     } catch { /* 无权限目录，跳过 */ continue; }
@@ -751,16 +752,14 @@ export function relocateMissingFile(oldPath: string, newRoot: string, app?: App)
 
   const cacheKey = `${cleanRoot}::${path.basename(oldPath).toLowerCase()}`;
   const cached = relocateCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   const skipDirs = getSkipDirs(app);
   const task = locateByFileName(oldPath, cleanRoot, skipDirs);
   relocateCache.set(cacheKey, task);
   if (relocateCache.size > RELOCATE_CACHE_LIMIT) {
-    const oldestKey = relocateCache.keys().next().value as string | undefined;
+    const [oldestKey] = relocateCache.keys();
     if (oldestKey !== undefined) relocateCache.delete(oldestKey);
   }
   return task;
 }
-
-/* eslint-enable @typescript-eslint/no-unsafe-member-access -- 恢复 no-unsafe-member-access 检查 */

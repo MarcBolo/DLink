@@ -20,13 +20,13 @@ function addGalleryItemButtons(
     updateCodeBlock: (newColumns: number, newImages: string[]) => Promise<void>,
     PathPromptModal: IGalleryPathPromptModal
 ) {
-    const editImageBtn = item.createEl('div', {
+    const editImageBtn = item.createDiv({
         text: '\u270e',
         cls: 'duallink-gallery-item-btn duallink-gallery-item-btn--edit',
         title: '\u66ff\u6362\u6b64\u56fe\u7247'
     });
 
-    const removeBtn = item.createEl('div', {
+    const removeBtn = item.createDiv({
         text: '\u2715',
         cls: 'duallink-gallery-item-btn duallink-gallery-item-btn--remove',
         title: '\u79fb\u9664\u6b64\u56fe\u7247'
@@ -90,8 +90,8 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
             if (!trimmed) continue;
             if (isConfig && trimmed.startsWith('{')) {
                 try {
-                    const config = JSON.parse(trimmed);
-                    if (config.columns) columns = config.columns;
+                    const config = JSON.parse(trimmed) as { columns?: number } | null;
+                    if (config?.columns) columns = config.columns;
                 } catch { /* invalid JSON config, skip */ }
                 isConfig = false;
             } else {
@@ -190,10 +190,10 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
             })();
         }, 100);
 
-        const galleryWrapper = el.createEl('div');
+        const galleryWrapper = el.createDiv();
         galleryWrapper.className = 'duallink-gallery-wrapper';
 
-        const grid = galleryWrapper.createEl('div');
+        const grid = galleryWrapper.createDiv();
         grid.className = 'duallink-gallery-grid';
 
         const colEls: HTMLElement[] = [];
@@ -264,7 +264,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
         let lastLayout = '';
 
         const distributeItems = () => {
-            const colHeights = new Array(columns).fill(0);
+            const colHeights = new Array<number>(columns).fill(0);
             const targetCols = new Array(items.length);
 
             items.forEach((it, idx) => {
@@ -308,7 +308,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
         });
 
         images.forEach((imgSource, index) => {
-            const item = activeDocument.createElement('div');
+            const item = createDiv();
             items.push(item);
             resizeObserver.observe(item);
 
@@ -335,7 +335,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                     item.addClass('duallink-gallery-item--dragging');
                 }, 0);
             });
-            item.addEventListener('dragend', (e) => {
+            item.addEventListener('dragend', () => {
                 item.removeClass('duallink-gallery-item--dragging');
                 if (!isAudioOnly) {
                     item.addClass('duallink-gallery-item--normal-border');
@@ -348,7 +348,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                 if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
                 item.addClass('duallink-gallery-item--drag-over');
             });
-            item.addEventListener('dragleave', (e) => {
+            item.addEventListener('dragleave', () => {
                 item.removeClass('duallink-gallery-item--drag-over');
                 if (!isAudioOnly) {
                     item.addClass('duallink-gallery-item--normal-border');
@@ -385,18 +385,18 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
 
             item.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                const media = item.querySelector('img, video') as HTMLImageElement | HTMLVideoElement;
+                const media = item.querySelector('img, video');
                 if (!media) return;
 
-                const overlay = activeDocument.body.createEl('div');
+                const overlay = activeDocument.body.createDiv();
                 overlay.className = 'duallink-gallery-overlay';
 
                 let clone: HTMLElement;
                 if (media.tagName.toLowerCase() === 'img') {
-                    clone = activeDocument.createElement('img');
+                    clone = createEl('img');
                     (clone as HTMLImageElement).src = (media as HTMLImageElement).src;
                 } else {
-                    clone = activeDocument.createElement('video');
+                    clone = createEl('video');
                     (clone as HTMLVideoElement).src = (media as HTMLVideoElement).src;
                     (clone as HTMLVideoElement).controls = true;
                     (clone as HTMLVideoElement).autoplay = true;
@@ -406,7 +406,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                 clone.addEventListener('click', (e2) => { e2.stopPropagation(); });
                 overlay.appendChild(clone);
 
-                const closeBtn = overlay.createEl('div', { text: '\u2715' });
+                const closeBtn = overlay.createDiv({ text: '\u2715' });
                 closeBtn.className = 'duallink-gallery-overlay-close';
 
                 // #9：DOM 没有原生 'remove' 事件，旧实现依赖 overlay 的 'remove' 事件去
@@ -451,7 +451,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                 }
 
                 if (linkPath) {
-                    try { linkPath = decodeURIComponent(linkPath); } catch (e) { /* invalid URI, keep original */ }
+                    try { linkPath = decodeURIComponent(linkPath); } catch { /* invalid URI, keep original */ }
 
                     let dest = plugin.app.metadataCache.getFirstLinkpathDest(linkPath, ctx.sourcePath);
                     if (!dest) {
@@ -503,7 +503,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                 if (mediaSrc) {
                     item.empty();
                     if (mediaType === 'video') {
-                        const video = activeDocument.createElement('video');
+                        const video = createEl('video');
                         video.src = mediaSrc;
                         video.controls = false;
                         video.addEventListener('mouseenter', () => video.controls = true);
@@ -514,7 +514,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                         item.appendChild(video);
                         trackBlobNode(video, mediaSrc);
                     } else if (mediaType === 'audio') {
-                        const audio = activeDocument.createElement('audio');
+                        const audio = createEl('audio');
                         audio.src = mediaSrc;
                         audio.controls = true;
                         audio.setAttribute('draggable', 'false');
@@ -522,7 +522,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                         item.appendChild(audio);
                         trackBlobNode(audio, mediaSrc);
                     } else {
-                        const img = activeDocument.createElement('img');
+                        const img = createEl('img');
                         img.src = mediaSrc;
                         img.loading = 'lazy';
                         img.decoding = 'async';
@@ -534,21 +534,21 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
                     addGalleryItemButtons(item, images, index, columns, plugin, el, updateCodeBlock, PathPromptModal);
                 } else if (externalReadFailed) {
                     // 外部文件缺失/不可读：渲染占位，不再回退 markdown 以免产生 file:// 二次 404
-                    const missingBox = activeDocument.createElement('div');
+                    const missingBox = createDiv();
                     missingBox.className = 'duallink-gallery-missing';
                     missingBox.title = failedExternalPath || imgSource;
-                    const missingIcon = activeDocument.createElement('div');
+                    const missingIcon = createDiv();
                     missingIcon.className = 'duallink-gallery-missing--icon';
                     setIcon(missingIcon, 'image-off');
-                    const missingName = activeDocument.createElement('span');
+                    const missingName = createSpan();
                     missingName.className = 'duallink-gallery-missing--name';
                     missingName.textContent = (failedExternalPath.split(/[\\/]/).pop() || '文件缺失');
                     missingBox.appendChild(missingIcon);
                     missingBox.appendChild(missingName);
                     item.appendChild(missingBox);
                 } else {
-                    /* eslint-disable-next-line @typescript-eslint/deprecation -- MarkdownRenderer.render 替代方案需要重构 */
-                    MarkdownRenderer.renderMarkdown(imgSource, item, ctx.sourcePath, plugin as unknown as import('obsidian').Component);
+                    // MarkdownRenderer.render 的迁移需要重构，此处暂用已废弃的 renderMarkdown（返回的 Promise 无需等待）
+                    void MarkdownRenderer.renderMarkdown(imgSource, item, ctx.sourcePath, plugin as unknown as import('obsidian').Component);
 
                     window.setTimeout(() => {
                         const medias = item.querySelectorAll('img, video, audio, .internal-embed');
@@ -591,7 +591,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
         const remainingCols = columns - images.length;
         if (remainingCols > 0) {
             for (let i = 0; i < remainingCols; i++) {
-                const emptyCell = activeDocument.createElement('div');
+                const emptyCell = createDiv();
                 items.push(emptyCell);
                 resizeObserver.observe(emptyCell);
                 emptyCell.className = 'duallink-gallery-empty';
@@ -609,7 +609,7 @@ export function registerGalleryProcessor(plugin: IDualLinkPlugin, PathPromptModa
 
                     emptyCell.empty();
                     emptyCell.addClass('duallink-gallery-empty--loading');
-                    emptyCell.createEl('span', { text: '\u6b63\u5728\u9009\u62e9\u6587\u4ef6...' });
+                    emptyCell.createSpan({ text: '\u6b63\u5728\u9009\u62e9\u6587\u4ef6...' });
 
                     const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
                     if (!view) {
