@@ -2,6 +2,8 @@
 
 Link, preview and manage files that live outside your vault — large videos, lossless audio, engineering assets, network drives — right inside Obsidian notes.
 
+![[案例]]
+
 # Features
 
 - **Dual-mode file browser** — switch between vault and external paths in one click, with search and type filters (all / image / video / audio / document).
