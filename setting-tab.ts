@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, type SettingDefinitionItem } from 'obsidian';
+import { App, PluginSettingTab, Setting, requireApiVersion, type SettingDefinitionItem } from 'obsidian';
 import type LocalFileLinkerPlugin from './main';
 
 export class LocalFileLinkerSettingTab extends PluginSettingTab {
@@ -74,10 +74,14 @@ export class LocalFileLinkerSettingTab extends PluginSettingTab {
   /**
    * 旧 display() 对路径输入做了 trim，声明式文本控件不做，这里统一补上，
    * 避免两条渲染路径写入的值不一致。
+   * setControlValue 属于 Obsidian 1.13+ 的声明式设置 API，用 requireApiVersion
+   * 显式守卫：旧版本上该方法不会被调用，也就不会碰到不存在的方法。
    */
   setControlValue(key: string, value: unknown): void | Promise<void> {
-    const normalized = typeof value === 'string' ? value.trim() : value;
-    return super.setControlValue(key, normalized);
+    if (requireApiVersion('1.13.0')) {
+      const normalized = typeof value === 'string' ? value.trim() : value;
+      return super.setControlValue(key, normalized);
+    }
   }
 
   /** Obsidian < 1.13 的回退渲染路径；1.13+ 由 getSettingDefinitions() 接管，不会调用此处 */

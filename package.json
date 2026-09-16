@@ -1,7 +1,7 @@
 {
   "name": "obsidian-dual-link",
   "private": true,
-  "version": "1.5.4",
+  "version": "1.5.5",
   "type": "module",
   "scripts": {
     "clean": "node -e \"const fs=require('fs');['dist','main.js'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}));\"",
