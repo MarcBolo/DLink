@@ -45,7 +45,7 @@ export class MobileFilePickerModal extends Modal {
       this.renderFiles();
     });
 
-    setTimeout(() => searchInput.focus(), 100);
+    window.setTimeout(() => searchInput.focus(), 100);
 
     // 标签栏
     const tabsRow = contentEl.createDiv({ cls: 'mobile-file-picker-tabs-row' });

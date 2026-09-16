@@ -1,0 +1,24 @@
+{
+  "name": "obsidian-dual-link",
+  "private": true,
+  "version": "1.5.4",
+  "type": "module",
+  "scripts": {
+    "clean": "node -e \"const fs=require('fs');['dist','main.js'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}));\"",
+    "type-check": "tsc --noEmit",
+    "build:plugin": "node esbuild.config.mjs production",
+    "build:styles": "node -e \"const fs = require('fs'); fs.mkdirSync('dist', { recursive: true }); fs.copyFileSync('styles.css', 'dist/styles.css'); fs.copyFileSync('manifest.json', 'dist/manifest.json'); if (fs.existsSync('main.js')) { fs.copyFileSync('main.js', 'dist/main.js'); fs.copyFileSync('main.js', 'public/main.js'); } fs.copyFileSync('manifest.json', 'public/manifest.json'); fs.copyFileSync('styles.css', 'public/styles.css');\"",
+    "build": "npm run clean && npm run type-check && npm run build:plugin && npm run build:styles",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "obsidian": "^1.13.1",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "typescript-eslint": "^8.70.0"
+  }
+}

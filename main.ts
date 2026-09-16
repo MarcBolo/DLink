@@ -84,7 +84,6 @@ export default class LocalFileLinkerPlugin extends Plugin {
   private relocateQueue = new Map<string, Promise<void>>();
 
   async onload() {
-    console.log('正在加载 Obsidian 外部物理文件关联映射插件 (DLink)...');
     await this.loadSettings();
 
     // 初始化公共 API（供其他插件调用）
@@ -335,9 +334,6 @@ export default class LocalFileLinkerPlugin extends Plugin {
           }
         });
       });
-    } else {
-      // 移动端提示
-      console.log('DLink: Running in mobile mode, desktop features disabled.');
     }
 
     // 5.5 注册分栏组图 (Gallery) 的 代码块处理器（通用功能）
@@ -440,10 +436,6 @@ export default class LocalFileLinkerPlugin extends Plugin {
     });
 
     menu.showAtPosition({ x: 50, y: 50 });
-  }
-
-  onunload() {
-    console.log('正在卸载 Obsidian 本地物理链接插件 (DLink)...');
   }
 
   async loadSettings() {
@@ -684,8 +676,7 @@ export default class LocalFileLinkerPlugin extends Plugin {
                   electron.shell.showItemInFolder(filePath);
                   new Notice('正在文件系统的所在文件夹中高亮显示该文件...');
                 } catch (e) {
-                  console.error("Shell error", e);
-                  new Notice('无法调用系统资源管理器定位。', 5000);
+                  new Notice('无法调用系统资源管理器定位：' + (e instanceof Error ? e.message : String(e)), 5000);
                 }
               });
           });
@@ -940,7 +931,6 @@ export class PathPromptModal extends Modal {
                                 if (this.pathInputEl) this.pathInputEl.value = this.currentFolderPath;
                                 await this.loadFiles();
                             } catch (err) {
-                                console.error('DLink browse error:', err);
                                 new Notice('读取目录失败: ' + (err instanceof Error ? err.message : String(err)));
                             }
                         } else {
@@ -1233,7 +1223,9 @@ export class PathPromptModal extends Modal {
                   ext: ''
               });
           }
-      } catch { }
+      } catch {
+          // 无法解析上级目录时忽略，不添加「返回上级目录」选项
+      }
 
       filtered.forEach(file => {
           if (file.isDirectory) ordered.push(file);
