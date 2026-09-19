@@ -39,8 +39,7 @@ const DEFAULT_SETTINGS: LocalFileLinkerSettings = {
   defaultFolderPath: '',
   internalFolderPath: '',
   externalMediaFolder: '',
-  packOutMode: 'move',
-  showMobileToolbarButton: true
+  packOutMode: 'move'
 };
 
 /**
@@ -348,94 +347,8 @@ export default class LocalFileLinkerPlugin extends Plugin {
       }
     });
 
-    // 7. 添加 Ribbon 图标（桌面和移动端通用）
-    if (this.settings.showMobileToolbarButton) {
-      this.addRibbonIcon('link-2', 'DLink', () => {
-        if (isDesktop() && fs && path && electron) {
-          this.showDesktopMenu();
-        } else {
-          this.showMobileMenu();
-        }
-      });
-    }
-
-    // 8. 注册设置管理面板
+    // 7. 注册设置管理面板
     this.addSettingTab(new LocalFileLinkerSettingTab(this.app, this));
-  }
-
-  // 显示桌面端菜单
-  showDesktopMenu() {
-    const menu = new Menu();
-
-    menu.addItem((item) => {
-      item.setTitle('插入本地文件链接')
-        .setIcon('link-2')
-        .onClick(() => {
-          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (view) {
-            void this.promptForLocalFileLink(view.editor);
-          }
-        });
-    });
-
-    menu.addItem((item) => {
-      item.setTitle('插入保险库文件')
-        .setIcon('folder')
-        .onClick(() => {
-          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (view) {
-            new MobileFilePickerModal(this, view.editor).open();
-          } else {
-            new Notice('请先打开一个 Markdown 编辑器');
-          }
-        });
-    });
-
-    menu.addSeparator();
-
-    menu.addItem((item) => {
-      item.setTitle('DualIn：打包到保险库')
-        .setIcon('archive')
-        .onClick(() => void this.packToVault());
-    });
-
-    menu.addItem((item) => {
-      item.setTitle('DualOut：外置到外部')
-        .setIcon('external-link')
-        .onClick(() => void this.packOut());
-    });
-
-    menu.showAtPosition({ x: 50, y: 50 });
-  }
-
-  // 显示移动端菜单
-  showMobileMenu() {
-    const menu = new Menu();
-
-    menu.addItem((item) => {
-      item.setTitle('插入保险库文件')
-        .setIcon('folder')
-        .onClick(() => {
-          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (view) {
-            new MobileFilePickerModal(this, view.editor).open();
-          } else {
-            new Notice('请先打开一个 Markdown 编辑器');
-          }
-        });
-    });
-
-    menu.addSeparator();
-
-    menu.addItem((item) => {
-      item.setTitle('关于 DLink')
-        .setIcon('info')
-        .onClick(() => {
-          new Notice('DLink - 管理本地与保险库文件链接的插件。桌面端支持更多功能。');
-        });
-    });
-
-    menu.showAtPosition({ x: 50, y: 50 });
   }
 
   async loadSettings() {

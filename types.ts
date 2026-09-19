@@ -7,7 +7,6 @@ export interface LocalFileLinkerSettings {
   internalFolderPath: string;
   externalMediaFolder: string;
   packOutMode: 'move' | 'copy';
-  showMobileToolbarButton: boolean;
 }
 
 export interface FileItem {

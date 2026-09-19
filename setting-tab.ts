@@ -63,11 +63,6 @@ export class LocalFileLinkerSettingTab extends PluginSettingTab {
           options: { move: '移动 (剪切)', copy: '复制 (保留)' },
         },
       },
-      {
-        name: '移动端工具栏按钮 (Mobile Toolbar Button)',
-        desc: '在移动端编辑器工具栏上显示 DLink 快捷按钮（仅在移动端有效）。',
-        control: { type: 'toggle', key: 'showMobileToolbarButton' },
-      },
     ];
   }
 
@@ -145,16 +140,6 @@ export class LocalFileLinkerSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.packOutMode)
         .onChange(async (value: 'move' | 'copy') => {
           this.plugin.settings.packOutMode = value;
-          await this.plugin.saveSettings();
-        }));
-
-    new Setting(containerEl)
-      .setName('移动端工具栏按钮 (Mobile Toolbar Button)')
-      .setDesc('在移动端编辑器工具栏上显示 DLink 快捷按钮（仅在移动端有效）。')
-      .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.showMobileToolbarButton)
-        .onChange(async (value) => {
-          this.plugin.settings.showMobileToolbarButton = value;
           await this.plugin.saveSettings();
         }));
   }
